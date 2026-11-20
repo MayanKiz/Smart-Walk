@@ -78,6 +78,7 @@ type AuthValue = {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInWithGitHub: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -117,6 +118,14 @@ function AuthProvider({ children }: { children: ReactNode }) {
       if (!supabase) throw new Error("Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
+        options: { redirectTo: `${window.location.origin}/app` },
+      });
+      if (error) throw error;
+    },
+    signInWithGitHub: async () => {
+      if (!supabase) throw new Error("Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "github",
         options: { redirectTo: `${window.location.origin}/app` },
       });
       if (error) throw error;
@@ -203,14 +212,71 @@ function Login() {
       setError(authErrorMessage(err, "Google sign-in could not start."));
     }
   };
-  return <div className="auth-page"><div className="auth-art"><Link to="/" className="brand light"><span className="brand-mark">S</span><span>Smart Walk</span></Link><div><div className="eyebrow light-eyebrow"><Shield size={15} /> Trusted caregiver access</div><h1>Your family connection,<br /><span>in one place.</span></h1><p>Sign in to check location freshness, device status and emergency alerts for the people you care about.</p></div><span className="auth-disclaimer">Only authorised caregivers can access linked user and location information.</span></div><div className="auth-form-wrap"><Link to="/" className="mobile-brand brand"><span className="brand-mark">S</span><span>Smart Walk</span></Link><div className="auth-form"><div className="eyebrow">Welcome back</div><h2>Caregiver login</h2><p className="muted">Use your account to continue to the dashboard.</p>{error && <div className="error-box"><AlertTriangle size={16} /> {error}</div>}<button className="google-button" type="button" onClick={googleSignIn}><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.6h3.2c1.9-1.7 3-4.3 3-7.4z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4L15.4 17c-.9.6-2.1 1-3.4 1-2.6 0-4.9-1.8-5.7-4.2H3v2.7A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.3 13.8A6 6 0 0 1 6 12c0-.6.1-1.2.3-1.8V7.5H3A10 10 0 0 0 2 12c0 1.6.4 3.2 1 4.5l3.3-2.7z"/><path fill="#EA4335" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.8A10 10 0 0 0 3 7.5l3.3 2.7C7.1 7.8 9.4 6 12 6z"/></svg> Continue with Google</button><div className="auth-divider"><span>or continue with email</span></div><form onSubmit={submit}><label>Email address<input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" required /></label><div className="form-row"><label className="check-label"><input type="checkbox" /> Remember me</label><a href="#forgot">Forgot password?</a></div><button className="button button-primary button-full" disabled={busy}>{busy ? "Signing in..." : "Sign in"} <ChevronRight size={17} /></button></form><p className="auth-switch">New caregiver? <Link to="/onboarding">Create an account</Link></p>{!isSupabaseConfigured && <div className="demo-note"><span className="demo-dot" /> Backend setup required: Supabase URL and anon key are missing.</div>}</div></div></div>;
+  const githubSignIn = async () => {
+    setError("");
+    try { await auth.signInWithGitHub(); } catch (err) {
+      setError(authErrorMessage(err, "GitHub sign-in could not start."));
+    }
+  };
+  return (
+    <div className="auth-page">
+      <div className="auth-art">
+        <Link to="/" className="brand light"><span className="brand-mark">S</span><span>Smart Walk</span></Link>
+        <div><div className="eyebrow light-eyebrow"><Shield size={15} /> Trusted caregiver access</div><h1>Your family connection,<br /><span>in one place.</span></h1><p>Sign in to check location freshness, device status and emergency alerts for the people you care about.</p></div>
+        <span className="auth-disclaimer">Only authorised caregivers can access linked user and location information.</span>
+      </div>
+      <div className="auth-form-wrap">
+        <Link to="/" className="mobile-brand brand"><span className="brand-mark">S</span><span>Smart Walk</span></Link>
+        <div className="auth-form">
+          <div className="eyebrow">Welcome back</div><h2>Caregiver login</h2><p className="muted">Use your account to continue to the dashboard.</p>
+          {error && <div className="error-box"><AlertTriangle size={16} /> {error}</div>}
+          <div className="social-buttons">
+            <button className="google-button" type="button" onClick={googleSignIn}>Continue with Google</button>
+            <button className="github-button" type="button" onClick={githubSignIn}>Continue with GitHub</button>
+          </div>
+          <div className="auth-divider"><span>or continue with email</span></div>
+          <form onSubmit={submit}>
+            <label>Email address<input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required /></label>
+            <label>Password<input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" required /></label>
+            <div className="form-row"><label className="check-label"><input type="checkbox" /> Remember me</label><a href="#forgot">Forgot password?</a></div>
+            <button className="button button-primary button-full" disabled={busy}>{busy ? "Signing in..." : "Sign in"} <ChevronRight size={17} /></button>
+          </form>
+          <p className="auth-switch">New caregiver? <Link to="/onboarding">Create an account</Link></p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function Onboarding() {
   const auth = useAuth(); const navigate = useNavigate();
   const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [code, setCode] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
   const submit = async (event: FormEvent) => { event.preventDefault(); setError(""); setBusy(true); try { await auth.signUp(name, email, password); if (code.trim() && supabase) { const { error: pairError } = await supabase.rpc("consume_pairing_code", { code_value: code.trim() }); if (pairError) throw pairError; } navigate("/app"); } catch (err) { setError(authErrorMessage(err, "Could not create account.")); } finally { setBusy(false); } };
-  return <div className="auth-page onboarding-page"><div className="auth-form-wrap centered-form"><Link to="/" className="brand"><span className="brand-mark">S</span><span>Smart Walk</span></Link><div className="auth-form"><div className="eyebrow">Start safely</div><h2>Create caregiver account</h2><p className="muted">Only collect what you need to get started. You can link a user or device after signup.</p>{error && <div className="error-box"><AlertTriangle size={16} /> {error}</div>}<button type="button" className="google-button" onClick={() => auth.signInWithGoogle().catch((err) => setError(authErrorMessage(err, "Google sign-in could not start.")))}><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.6h3.2c1.9-1.7 3-4.3 3-7.4z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4L15.4 17c-.9.6-2.1 1-3.4 1-2.6 0-4.9-1.8-5.7-4.2H3v2.7A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.3 13.8A6 6 0 0 1 6 12c0-.6.1-1.2.3-1.8V7.5H3A10 10 0 0 0 2 12c0 1.6.4 3.2 1 4.5l3.3-2.7z"/><path fill="#EA4335" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.8A10 10 0 0 0 3 7.5l3.3 2.7C7.1 7.8 9.4 6 12 6z"/></svg> Continue with Google</button><div className="auth-divider"><span>or create with email</span></div><form onSubmit={submit}><label>Full name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" required /></label><label>Email address<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required /></label><label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" minLength={8} required /></label><label>Pairing code <span className="optional">optional</span><input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Ask your project admin for a code" /></label><label className="check-label"><input type="checkbox" required /> I agree to the privacy terms and understand this is not a replacement for emergency services.</label><button className="button button-primary button-full" disabled={busy}>{busy ? "Creating account..." : "Create account"} <ChevronRight size={17} /></button></form><p className="auth-switch">Already registered? <Link to="/login">Sign in</Link></p></div></div></div>;
+  return (
+    <div className="auth-page onboarding-page">
+      <div className="auth-form-wrap centered-form">
+        <Link to="/" className="brand"><span className="brand-mark">S</span><span>Smart Walk</span></Link>
+        <div className="auth-form">
+          <div className="eyebrow">Start safely</div><h2>Create caregiver account</h2><p className="muted">Only collect what you need to get started. You can link a user or device after signup.</p>
+          {error && <div className="error-box"><AlertTriangle size={16} /> {error}</div>}
+          <div className="social-buttons">
+            <button type="button" className="google-button" onClick={() => auth.signInWithGoogle().catch((err) => setError(authErrorMessage(err, "Google sign-in could not start.")))}>Continue with Google</button>
+            <button type="button" className="github-button" onClick={() => auth.signInWithGitHub().catch((err) => setError(authErrorMessage(err, "GitHub sign-in could not start.")))}>Continue with GitHub</button>
+          </div>
+          <div className="auth-divider"><span>or create with email</span></div>
+          <form onSubmit={submit}>
+            <label>Full name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" required /></label>
+            <label>Email address<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required /></label>
+            <label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" minLength={8} required /></label>
+            <label>Pairing code <span className="optional">optional</span><input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Ask your project admin for a code" /></label>
+            <label className="check-label"><input type="checkbox" required /> I agree to the privacy terms and understand this is not a replacement for emergency services.</label>
+            <button className="button button-primary button-full" disabled={busy}>{busy ? "Creating account..." : "Create account"} <ChevronRight size={17} /></button>
+          </form>
+          <p className="auth-switch">Already registered? <Link to="/login">Sign in</Link></p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function HelpPage() {
@@ -359,7 +425,10 @@ function LoadingScreen() { return <div className="loading-screen"><span classNam
 function authErrorMessage(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message : fallback;
   if (message.includes("Unsupported provider") || message.includes("provider is not enabled")) {
-    return "Google sign-in is not enabled in Supabase yet. Open Authentication → Providers → Google, enable it, and add Google OAuth credentials.";
+    if (message.toLowerCase().includes("github") || fallback.toLowerCase().includes("github")) {
+      return "GitHub sign-in is not enabled in Supabase yet. Open Authentication → Providers → GitHub, enable it, and add the GitHub OAuth client ID and secret.";
+    }
+    return "OAuth sign-in is not enabled in Supabase yet. Open Authentication → Providers, enable the provider you selected, and add its OAuth credentials.";
   }
   return message;
 }
