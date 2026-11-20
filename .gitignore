@@ -3,3 +3,4 @@
 !.env.example
 .supabase/
 node_modules/
+dist/

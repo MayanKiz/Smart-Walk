@@ -1,4 +1,38 @@
-# Smart Walk backend
+# Smart Walk
+
+Smart Walk is a caregiver-facing safety dashboard for SOS visibility, GPS freshness,
+family access and device health. The hardware/device firmware is intentionally outside
+this repository; the admin panel and secure ingestion boundary are included.
+
+## Web app
+
+The frontend is React + TypeScript + Vite. With no Vite Supabase variables present it
+runs in a clearly labelled **Demo data** mode so the complete dashboard can be reviewed
+without exposing or inventing production telemetry.
+
+```bash
+npm install
+npm run dev
+```
+
+For a connected project, copy `.env.example` to `.env.local` and set:
+
+```text
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+VITE_SUPABASE_ANON_KEY=YOUR_PUBLIC_ANON_KEY
+```
+
+Only the public anon key belongs in the browser. The service role key is used only by
+the device Edge Function.
+
+Included screens:
+
+- Landing, caregiver login, account onboarding and help
+- Overview dashboard with SOS priority state, device health and location preview
+- Live tracking with GPS freshness and last-known-location labels
+- SOS history with acknowledgement and resolution workflow
+- User details, device health, emergency contacts and settings
+- Admin panel for the operator's device pairing checklist
 
 This repository contains the Supabase backend foundation for the Smart Walk caregiver
 dashboard.
