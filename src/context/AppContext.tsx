@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { demoAlerts, demoContacts, demoDevice, demoLocation, demoUser } from "../lib/demoData";
 import type { Contact, Device, LocationFix, SmartWalkUser, SosEvent } from "../lib/types";
 import { isSupabaseConfigured, supabase } from "../lib/supabase";
 
@@ -21,45 +20,27 @@ type AppContextValue = {
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState(demoUser);
-  const [device, setDevice] = useState(demoDevice);
-  const [location, setLocation] = useState<LocationFix | null>(demoLocation);
-  const [alerts, setAlerts] = useState(demoAlerts);
-  const [contacts, setContacts] = useState(demoContacts);
+  const [user, setUser] = useState<SmartWalkUser>({
+    id: "", displayName: "No linked user", relationship: "Setup required",
+    notes: "Link a Smart Walk user to begin.", preferredLanguage: "—",
+  });
+  const [device, setDevice] = useState<Device>({
+    id: "", identifier: "No device linked", battery: 0, online: false,
+    gps: "unavailable", network: "Unknown",
+    lastSeenAt: new Date(0).toISOString(), firmware: "Unknown",
+  });
+  const [location, setLocation] = useState<LocationFix | null>(null);
+  const [alerts, setAlerts] = useState<SosEvent[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
 
   const acknowledgeAlert = async (id: string) => {
-    if (!isSupabaseConfigured) {
-      setAlerts((current) =>
-        current.map((alert) =>
-          alert.id === id
-            ? { ...alert, status: "acknowledged", acknowledgedBy: "You", acknowledgedAt: new Date().toISOString() }
-            : alert,
-        ),
-      );
-      return;
-    }
+    if (!isSupabaseConfigured) throw new Error("Supabase is not configured.");
     const { error } = await supabase!.rpc("acknowledge_sos", { event_id: id });
     if (error) throw error;
   };
 
   const resolveAlert = async (id: string, note: string) => {
-    if (!isSupabaseConfigured) {
-      setAlerts((current) =>
-        current.map((alert) =>
-          alert.id === id
-            ? {
-                ...alert,
-                status: "resolved",
-                acknowledgedBy: alert.acknowledgedBy ?? "You",
-                acknowledgedAt: alert.acknowledgedAt ?? new Date().toISOString(),
-                resolvedAt: new Date().toISOString(),
-                resolutionNote: note,
-              }
-            : alert,
-        ),
-      );
-      return;
-    }
+    if (!isSupabaseConfigured) throw new Error("Supabase is not configured.");
     const { error } = await supabase!.rpc("resolve_sos", { event_id: id, note });
     if (error) throw error;
   };

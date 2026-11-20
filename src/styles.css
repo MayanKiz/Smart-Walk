@@ -38,6 +38,8 @@ button { cursor: pointer; }
 .button-full { width: 100%; }
 .button-light { background: white; color: var(--red); }
 .button-danger-outline { border: 1px solid #efb4b4; color: var(--red); background: white; }
+.google-button { width: 100%; min-height: 45px; border: 1px solid #d5e0e9; border-radius: 8px; background: white; color: #34495a; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 13px; font-weight: 700; }.google-button svg { width: 18px; height: 18px; }.google-button:hover { background: #f8fafc; }.auth-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0 1px; color: #94a2af; font-size: 10px; }.auth-divider:before,.auth-divider:after { content: ""; height: 1px; flex: 1; background: #edf2f6; }
+.admin-form { display: grid; gap: 12px; margin-bottom: 18px; }.admin-form label { display: grid; gap: 7px; color: #526a7d; font-size: 11px; font-weight: 700; }.admin-form select,.admin-form input { min-height: 42px; border: 1px solid #d5e0e9; border-radius: 8px; background: white; color: var(--navy); padding: 0 11px; }.inline-action { display: grid; grid-template-columns: 1fr auto; gap: 8px; }.inline-action:has(input:nth-child(3)) { grid-template-columns: 1fr 1fr auto; }.admin-form input { width: 100%; }
 .hero { max-width: 1240px; margin: auto; padding: 88px 32px 112px; display: grid; grid-template-columns: 1fr .9fr; gap: 60px; align-items: center; }
 .eyebrow { color: var(--blue); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; display: flex; align-items: center; gap: 7px; }
 .hero h1 { margin: 18px 0; font-size: clamp(42px, 5vw, 72px); letter-spacing: -.07em; line-height: .98; color: var(--navy); }

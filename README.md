@@ -25,6 +25,35 @@ VITE_SUPABASE_ANON_KEY=YOUR_PUBLIC_ANON_KEY
 Only the public anon key belongs in the browser. The service role key is used only by
 the device Edge Function.
 
+## Google authentication
+
+In Supabase Dashboard:
+
+1. Open **Authentication → Providers → Google** and enable it.
+2. Create OAuth credentials in Google Cloud.
+3. Set Supabase's callback URL as an authorised redirect URI in Google Cloud.
+4. Add `https://zhcvpicbyqahtrkxpftl.supabase.co/auth/v1/callback` to Google authorised redirect URIs.
+5. Add the Google client ID and secret to Supabase.
+6. In **Authentication → URL Configuration**, add the deployed web app origin to
+   Redirect URLs.
+
+## Apply database migrations
+
+In Supabase Dashboard open **SQL Editor** and run both migration files in filename
+order:
+
+```text
+supabase/migrations/20261120172500_initial_schema.sql
+supabase/migrations/20261120174500_pairing_codes.sql
+```
+
+Then deploy the Edge Function in Supabase Dashboard or with an authenticated Supabase CLI:
+
+```bash
+npx supabase link --project-ref zhcvpicbyqahtrkxpftl
+npx supabase functions deploy device-ingest --no-verify-jwt
+```
+
 Included screens:
 
 - Landing, caregiver login, account onboarding and help

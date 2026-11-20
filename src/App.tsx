@@ -77,13 +77,14 @@ type AuthValue = {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthValue | null>(null);
 
 function AuthProvider({ children }: { children: ReactNode }) {
-  const [authenticated, setAuthenticated] = useState(!isSupabaseConfigured || localStorage.getItem("smartwalk-demo-auth") === "true");
+  const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(isSupabaseConfigured);
 
   useEffect(() => {
@@ -103,23 +104,21 @@ function AuthProvider({ children }: { children: ReactNode }) {
     authenticated,
     loading,
     signIn: async (email, password) => {
-      if (!supabase) {
-        if (!email || !password) throw new Error("Enter your email and password.");
-        localStorage.setItem("smartwalk-demo-auth", "true");
-        setAuthenticated(true);
-        return;
-      }
+      if (!supabase) throw new Error("Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
     },
     signUp: async (name, email, password) => {
-      if (!supabase) {
-        if (!name || !email || password.length < 8) throw new Error("Use a name, email and password with at least 8 characters.");
-        localStorage.setItem("smartwalk-demo-auth", "true");
-        setAuthenticated(true);
-        return;
-      }
+      if (!supabase) throw new Error("Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
       const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
+      if (error) throw error;
+    },
+    signInWithGoogle: async () => {
+      if (!supabase) throw new Error("Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/app` },
+      });
       if (error) throw error;
     },
     signOut: async () => {
@@ -198,14 +197,18 @@ function Login() {
     event.preventDefault(); setError(""); setBusy(true);
     try { await auth.signIn(email, password); navigate("/app"); } catch (err) { setError(err instanceof Error ? err.message : "Could not sign in."); } finally { setBusy(false); }
   };
-  return <div className="auth-page"><div className="auth-art"><Link to="/" className="brand light"><span className="brand-mark">S</span><span>Smart Walk</span></Link><div><div className="eyebrow light-eyebrow"><Shield size={15} /> Trusted caregiver access</div><h1>Your family connection,<br /><span>in one place.</span></h1><p>Sign in to check location freshness, device status and emergency alerts for the people you care about.</p></div><span className="auth-disclaimer">Only authorised caregivers can access linked user and location information.</span></div><div className="auth-form-wrap"><Link to="/" className="mobile-brand brand"><span className="brand-mark">S</span><span>Smart Walk</span></Link><div className="auth-form"><div className="eyebrow">Welcome back</div><h2>Caregiver login</h2><p className="muted">Use your account to continue to the dashboard.</p>{error && <div className="error-box"><AlertTriangle size={16} /> {error}</div>}<form onSubmit={submit}><label>Email address<input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" required /></label><div className="form-row"><label className="check-label"><input type="checkbox" /> Remember me</label><a href="#forgot">Forgot password?</a></div><button className="button button-primary button-full" disabled={busy}>{busy ? "Signing in..." : "Sign in"} <ChevronRight size={17} /></button></form><p className="auth-switch">New caregiver? <Link to="/onboarding">Create an account</Link></p>{!isSupabaseConfigured && <div className="demo-note"><span className="demo-dot" /> Demo mode is active. Any email and password will work.</div>}</div></div></div>;
+  const googleSignIn = async () => {
+    setError("");
+    try { await auth.signInWithGoogle(); } catch (err) { setError(err instanceof Error ? err.message : "Google sign-in could not start."); }
+  };
+  return <div className="auth-page"><div className="auth-art"><Link to="/" className="brand light"><span className="brand-mark">S</span><span>Smart Walk</span></Link><div><div className="eyebrow light-eyebrow"><Shield size={15} /> Trusted caregiver access</div><h1>Your family connection,<br /><span>in one place.</span></h1><p>Sign in to check location freshness, device status and emergency alerts for the people you care about.</p></div><span className="auth-disclaimer">Only authorised caregivers can access linked user and location information.</span></div><div className="auth-form-wrap"><Link to="/" className="mobile-brand brand"><span className="brand-mark">S</span><span>Smart Walk</span></Link><div className="auth-form"><div className="eyebrow">Welcome back</div><h2>Caregiver login</h2><p className="muted">Use your account to continue to the dashboard.</p>{error && <div className="error-box"><AlertTriangle size={16} /> {error}</div>}<button className="google-button" type="button" onClick={googleSignIn}><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.6h3.2c1.9-1.7 3-4.3 3-7.4z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4L15.4 17c-.9.6-2.1 1-3.4 1-2.6 0-4.9-1.8-5.7-4.2H3v2.7A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.3 13.8A6 6 0 0 1 6 12c0-.6.1-1.2.3-1.8V7.5H3A10 10 0 0 0 2 12c0 1.6.4 3.2 1 4.5l3.3-2.7z"/><path fill="#EA4335" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.8A10 10 0 0 0 3 7.5l3.3 2.7C7.1 7.8 9.4 6 12 6z"/></svg> Continue with Google</button><div className="auth-divider"><span>or continue with email</span></div><form onSubmit={submit}><label>Email address<input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" required /></label><div className="form-row"><label className="check-label"><input type="checkbox" /> Remember me</label><a href="#forgot">Forgot password?</a></div><button className="button button-primary button-full" disabled={busy}>{busy ? "Signing in..." : "Sign in"} <ChevronRight size={17} /></button></form><p className="auth-switch">New caregiver? <Link to="/onboarding">Create an account</Link></p>{!isSupabaseConfigured && <div className="demo-note"><span className="demo-dot" /> Backend setup required: Supabase URL and anon key are missing.</div>}</div></div></div>;
 }
 
 function Onboarding() {
   const auth = useAuth(); const navigate = useNavigate();
   const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [code, setCode] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
-  const submit = async (event: FormEvent) => { event.preventDefault(); setError(""); setBusy(true); try { await auth.signUp(name, email, password); navigate("/app"); } catch (err) { setError(err instanceof Error ? err.message : "Could not create account."); } finally { setBusy(false); } };
-  return <div className="auth-page onboarding-page"><div className="auth-form-wrap centered-form"><Link to="/" className="brand"><span className="brand-mark">S</span><span>Smart Walk</span></Link><div className="auth-form"><div className="eyebrow">Start safely</div><h2>Create caregiver account</h2><p className="muted">Only collect what you need to get started. You can link a user or device after signup.</p>{error && <div className="error-box"><AlertTriangle size={16} /> {error}</div>}<form onSubmit={submit}><label>Full name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" required /></label><label>Email address<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required /></label><label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" minLength={8} required /></label><label>Pairing code <span className="optional">optional</span><input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Ask your project admin for a code" /></label><label className="check-label"><input type="checkbox" required /> I agree to the privacy terms and understand this is not a replacement for emergency services.</label><button className="button button-primary button-full" disabled={busy}>{busy ? "Creating account..." : "Create account"} <ChevronRight size={17} /></button></form><p className="auth-switch">Already registered? <Link to="/login">Sign in</Link></p></div></div></div>;
+  const submit = async (event: FormEvent) => { event.preventDefault(); setError(""); setBusy(true); try { await auth.signUp(name, email, password); if (code.trim() && supabase) { const { error: pairError } = await supabase.rpc("consume_pairing_code", { code_value: code.trim() }); if (pairError) throw pairError; } navigate("/app"); } catch (err) { setError(err instanceof Error ? err.message : "Could not create account."); } finally { setBusy(false); } };
+  return <div className="auth-page onboarding-page"><div className="auth-form-wrap centered-form"><Link to="/" className="brand"><span className="brand-mark">S</span><span>Smart Walk</span></Link><div className="auth-form"><div className="eyebrow">Start safely</div><h2>Create caregiver account</h2><p className="muted">Only collect what you need to get started. You can link a user or device after signup.</p>{error && <div className="error-box"><AlertTriangle size={16} /> {error}</div>}<button type="button" className="google-button" onClick={() => auth.signInWithGoogle().catch((err) => setError(err instanceof Error ? err.message : "Google sign-in could not start."))}><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.6h3.2c1.9-1.7 3-4.3 3-7.4z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4L15.4 17c-.9.6-2.1 1-3.4 1-2.6 0-4.9-1.8-5.7-4.2H3v2.7A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.3 13.8A6 6 0 0 1 6 12c0-.6.1-1.2.3-1.8V7.5H3A10 10 0 0 0 2 12c0 1.6.4 3.2 1 4.5l3.3-2.7z"/><path fill="#EA4335" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.8A10 10 0 0 0 3 7.5l3.3 2.7C7.1 7.8 9.4 6 12 6z"/></svg> Continue with Google</button><div className="auth-divider"><span>or create with email</span></div><form onSubmit={submit}><label>Full name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" required /></label><label>Email address<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required /></label><label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" minLength={8} required /></label><label>Pairing code <span className="optional">optional</span><input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Ask your project admin for a code" /></label><label className="check-label"><input type="checkbox" required /> I agree to the privacy terms and understand this is not a replacement for emergency services.</label><button className="button button-primary button-full" disabled={busy}>{busy ? "Creating account..." : "Create account"} <ChevronRight size={17} /></button></form><p className="auth-switch">Already registered? <Link to="/login">Sign in</Link></p></div></div></div>;
 }
 
 function HelpPage() {
@@ -253,8 +256,66 @@ function SettingsPage() {
 }
 
 function AdminPanel() {
-  const [code, setCode] = useState("SW-7K4P-92QX"); const [created, setCreated] = useState(false);
-  return <div className="page-stack"><PageIntro eyebrow="Project operator only" title="Admin panel" text="Hardware is connected by an admin here. The physical stick remains outside this web project." /><div className="admin-grid"><div className="card"><div className="card-head"><div><h3>Pair a Smart Walk device</h3><span className="muted">Create a one-time code for a caregiver or user.</span></div><Shield className="muted-icon" size={20} /></div><div className="pairing-preview"><div className="pairing-code">{created ? code : "•••• ••••"}</div><span>{created ? "Share this code securely. It expires after use." : "Code stays hidden until generated."}</span></div><div className="form-grid"><ReadOnly label="Device identifier" value="SW-DEMO-001" /><ReadOnly label="Linked user" value="Aarav Sharma" /></div><button className="button button-primary" onClick={() => setCreated(true)}><Plus size={16} /> {created ? "Generate new code" : "Generate pairing code"}</button></div><div className="card"><div className="card-head"><div><h3>Admin checklist</h3><span className="muted">Complete these before hardware delivery.</span></div></div><Checklist done text="Create caregiver account" /><Checklist done text="Add Smart Walk user profile" /><Checklist done={created} text="Generate device pairing code" /><Checklist done={false} text="Device sends first heartbeat" /><Checklist done={false} text="Confirm GPS and SOS test" /></div></div><div className="info-banner"><CircleHelp size={18} /><div><strong>Hardware integration boundary</strong><p>The stick should call the secure <code>device-ingest</code> Edge Function with its device ID and secret token. It must never receive the browser's Supabase service key.</p></div></div></div>;
+  const [code, setCode] = useState(""); const [created, setCreated] = useState(false); const [error, setError] = useState("");
+  const [users, setUsers] = useState<{ id: string; display_name: string }[]>([]);
+  const [devices, setDevices] = useState<{ id: string; device_identifier: string; smart_walk_user_id: string }[]>([]);
+  const [selectedUser, setSelectedUser] = useState("");
+  const [selectedDevice, setSelectedDevice] = useState("");
+  const [userName, setUserName] = useState("");
+  const [deviceIdentifier, setDeviceIdentifier] = useState("");
+  const [deviceToken, setDeviceToken] = useState("");
+
+  useEffect(() => {
+    if (!supabase) return;
+    void Promise.all([
+      supabase.from("smart_walk_users").select("id, display_name").order("display_name"),
+      supabase.from("devices").select("id, device_identifier, smart_walk_user_id").order("device_identifier"),
+    ]).then(([userResult, deviceResult]) => {
+      if (userResult.data) setUsers(userResult.data);
+      if (deviceResult.data) setDevices(deviceResult.data);
+    });
+  }, []);
+
+  const createUser = async () => {
+    setError("");
+    if (!supabase || !userName.trim()) return;
+    const { data, error: createError } = await supabase.from("smart_walk_users").insert({ display_name: userName.trim() }).select("id, display_name").single();
+    if (createError) { setError(createError.message); return; }
+    setUsers((current) => [...current, data]);
+    setSelectedUser(data.id);
+    setUserName("");
+  };
+
+  const createDevice = async () => {
+    setError("");
+    if (!supabase || !selectedUser || !deviceIdentifier.trim() || !deviceToken.trim()) { setError("Select a user, then enter a device ID and device secret."); return; }
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(deviceToken));
+    const tokenHash = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    const { data, error: createError } = await supabase.from("devices").insert({
+      device_identifier: deviceIdentifier.trim(),
+      smart_walk_user_id: selectedUser,
+      device_token_hash: tokenHash,
+    }).select("id, device_identifier, smart_walk_user_id").single();
+    if (createError) { setError(createError.message); return; }
+    setDevices((current) => [...current, data]);
+    setSelectedDevice(data.id);
+    setDeviceIdentifier("");
+    setDeviceToken("");
+  };
+
+  const generatePairingCode = async () => {
+    setError("");
+    if (!supabase || !selectedUser) { setError("Select or create a Smart Walk user first."); return; }
+    const { data, error: codeError } = await supabase.rpc("generate_pairing_code", {
+      target_user_id: selectedUser,
+      target_device_id: selectedDevice || null,
+    });
+    if (codeError) { setError(codeError.message); return; }
+    setCode(String(data));
+    setCreated(true);
+  };
+
+  return <div className="page-stack"><PageIntro eyebrow="Project operator only" title="Admin panel" text="Create and link real Smart Walk users and hardware. Only authorised admins can access this panel." /><div className="admin-grid"><div className="card"><div className="card-head"><div><h3>Set up user and device</h3><span className="muted">Create a real profile and provision an ingest secret.</span></div><Shield className="muted-icon" size={20} /></div>{error && <div className="error-box"><AlertTriangle size={16} /> {error}</div>}<div className="admin-form"><label>Smart Walk user<select value={selectedUser} onChange={(event) => setSelectedUser(event.target.value)}><option value="">Select a user</option>{users.map((user) => <option key={user.id} value={user.id}>{user.display_name}</option>)}</select></label><div className="inline-action"><input value={userName} onChange={(event) => setUserName(event.target.value)} placeholder="New user name" /><button className="button button-outline" onClick={createUser}><Plus size={15} /> Add</button></div><label>Device<select value={selectedDevice} onChange={(event) => setSelectedDevice(event.target.value)}><option value="">No linked device yet</option>{devices.filter((device) => !selectedUser || device.smart_walk_user_id === selectedUser).map((device) => <option key={device.id} value={device.id}>{device.device_identifier}</option>)}</select></label><div className="inline-action"><input value={deviceIdentifier} onChange={(event) => setDeviceIdentifier(event.target.value)} placeholder="Device ID, e.g. SW-0001" /><input type="password" value={deviceToken} onChange={(event) => setDeviceToken(event.target.value)} placeholder="One-time device secret" /><button className="button button-outline" onClick={createDevice}>Provision</button></div></div><div className="pairing-preview"><div className="pairing-code">{created ? code : "•••• ••••"}</div><span>{created ? "Share securely. This code expires after 24 hours or one use." : "Generate a real pairing code after selecting a user."}</span></div><button className="button button-primary" onClick={generatePairingCode}><Plus size={16} /> {created ? "Generate new pairing code" : "Generate pairing code"}</button></div><div className="card"><div className="card-head"><div><h3>Admin checklist</h3><span className="muted">Complete these before hardware delivery.</span></div></div><Checklist done text="Create caregiver account" /><Checklist done={users.length > 0} text="Add Smart Walk user profile" /><Checklist done={devices.length > 0} text="Provision device ID and secret" /><Checklist done={created} text="Generate device pairing code" /><Checklist done={false} text="Device sends first heartbeat" /><Checklist done={false} text="Confirm GPS and SOS test" /></div></div><div className="info-banner"><CircleHelp size={18} /><div><strong>Hardware integration boundary</strong><p>The stick sends heartbeat, location or SOS JSON to <code>/functions/v1/device-ingest</code> with <code>x-device-id</code> and <code>x-device-token</code>. Never place the Supabase service role key on hardware or in the browser.</p></div></div></div>;
 }
 
 function AlertBanner({ alert }: { alert: SosEvent }) {
